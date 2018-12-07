@@ -2,7 +2,7 @@
 name = "tetris"
 version = "0.1.0"
 authors = ["tmore <tmore@kth.se>"]
-
+edition="2018"
 
 [dependencies]
 glutin="0.*.0"

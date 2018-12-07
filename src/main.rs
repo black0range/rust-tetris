@@ -1,15 +1,13 @@
-#[macro_use]
 extern crate glium;
 
 use glium::Surface;
-use glium::glutin;
-
+use crate::graphics::shapes;
 mod graphics;
 
 fn main() {
-    let mut events_loop = glutin::EventsLoop::new();
-    let window = glutin::WindowBuilder::new();
-    let context = glutin::ContextBuilder::new();
+    let mut events_loop = glium::glutin::EventsLoop::new();
+    let window = glium::glutin::WindowBuilder::new();
+    let context = glium::glutin::ContextBuilder::new();
     let display = glium::Display::new(window, context, &events_loop).unwrap();
 
     let mut renderer = graphics::renderer::Renderer::new(&display);
@@ -18,12 +16,12 @@ fn main() {
 
     let cube_mesh = renderer.load_mesh_with(
         &String::from("unit_cube"),
-        &graphics::shapes::make_unit_cube
+        &shapes::make_unit_cube
     ).unwrap();
 
     let triangle_mesh =renderer.load_mesh_with(
         &String::from("unit_triangle"),
-        &graphics::shapes::make_unit_cube
+        &shapes::make_unit_cube
     ).unwrap();
 
 
@@ -72,11 +70,11 @@ fn main() {
         let mut target = display.draw();
         target.clear_color(1.,1.,1.,0.);
 
-        renderer.draw([cube].into(), &camera);
+        renderer.render([cube].into(), &mut camera);
 
-        triangle_mesh.draw(&mut target, &program,
-                           &uniforms,
-                           &Default::default()).unwrap();
+        // triangle_mesh.draw(&mut target, &program,
+        //                    &uniforms,
+        //                    &Default::default()).unwrap();
         target.finish().unwrap();
     }
 }

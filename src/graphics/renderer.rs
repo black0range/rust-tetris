@@ -1,12 +1,11 @@
-use graphics;
-use graphics::nalgebra::{Vector4, Vector3, Matrix4};
-use graphics::glium::backend::{Facade};
-use graphics::core::*;
+use nalgebra::{Vector4, Vector3, Matrix4};
+use glium::backend::{Facade};
+use crate::graphics::core::*;
+use crate::graphics::camera::Camera;
 use std::path::Path;
-use graphics::glium::Surface;
+use glium::Surface;
 
 #[macro_use]
-use graphics::glium::uniform;
 
 pub struct ModelTrans {
     uniform_matrix: Matrix4<f32>,
@@ -148,8 +147,8 @@ impl MeshStore {
     fn insert(
         &mut self,
         name: &String,
-        make: &Fn() -> Result<Mesh, graphics::core::BufferCreationError>,
-    ) -> Result<MeshRef, graphics::core::BufferCreationError>
+        make: &Fn() -> Result<Mesh, BufferCreationError>,
+    ) -> Result<MeshRef, BufferCreationError>
     {
         let content = self.name_map.get(name).map(|e| e.clone());
         match content {
@@ -206,16 +205,16 @@ impl<'a> Renderer<'a> {
 
     pub fn render<I>(
         &mut self,
-        objects : I,
-        camera: &mut graphics::camera::Camera
+        _objects : I,
+        camera: &mut Camera
     ) where I: Iterator<Item = &'a mut RenderObject> {
 
         let mut target = self.display.draw();
 
         target.clear_color(1.,1.,1.,0.);
-        let cam_mat = camera.as_primitive();
+        let _cam_mat = camera.as_primitive();
 
-        let program = self.program.as_mut().unwrap();
+        let _program = self.program.as_mut().unwrap();
 
         // for mut obj in objects {
         //     let mut mesh_ref = obj.mesh_ref.clone();
@@ -245,10 +244,10 @@ impl<'a> Renderer<'a> {
         name: &String,
         indices: &[u16],
         vertices: &[Vertex]
-    ) -> Result<&Renderer, graphics::core::BufferCreationError> {
-        let mut f = self.display;
+    ) -> Result<&Renderer, BufferCreationError> {
+        let f = self.display;
         self.mesh_store.insert(name, &|| {
-            graphics::core::Mesh::new(f,indices, vertices)}
+            Mesh::new(f,indices, vertices)}
         )?;
         Result::Ok(self)
     }
@@ -256,8 +255,8 @@ impl<'a> Renderer<'a> {
     pub fn load_mesh_with(
         &mut self,
         name: &String,
-        init_fn: &Fn(&Facade) -> Result<Mesh, graphics::core::BufferCreationError>
-    ) -> Result<MeshRef, graphics::core::BufferCreationError>
+        init_fn: &Fn(&Facade) -> Result<Mesh, BufferCreationError>
+    ) -> Result<MeshRef, BufferCreationError>
      {
         let f = self.display;
         self.mesh_store.insert(name, &|| {
@@ -274,9 +273,9 @@ impl<'a> Renderer<'a> {
         &mut self,
         vertex_fp: P,
         fragment_fp: P
-    ) -> Result<&Renderer, graphics::core::ProgramCreationError>
+    ) -> Result<&Renderer, ProgramCreationError>
     where P: AsRef<Path> {
-        self.program = graphics::core::simple_program(
+        self.program = crate::graphics::core::simple_program(
             self.display,
             vertex_fp,
             fragment_fp

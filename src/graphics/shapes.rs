@@ -1,5 +1,5 @@
-use graphics::core::{Vertex, Mesh, BufferCreationError};
-use graphics::glium::backend::{Facade};
+use crate::graphics::core::{Vertex, Mesh, BufferCreationError};
+use glium::backend::{Facade};
 
 const UNIT_TRIANGLE_VERTICES : [Vertex;3] = [
     Vertex::new_2d(0.,1.),

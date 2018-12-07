@@ -176,7 +176,7 @@ impl Camera {
         self
     }
 
-    pub fn move_up(&mut self, d: f32) -> &Camera {
+    pub fn move_up(&mut self, _d: f32) -> &Camera {
         let a = self.at.cross(&self.up);
         self.add_position(&a);
         self

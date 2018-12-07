@@ -1,7 +1,10 @@
 #[macro_use]
-use graphics::glium::backend::{Facade};
-use graphics;
+use glium::backend::{Facade};
+use std::path::Path;
+use glium::program::Program;
+use std::fs::File;
 
+use::std::error::Error;
 
 #[derive(Debug)]
 pub enum BufferCreationError {
@@ -20,7 +23,7 @@ impl std::error::Error for BufferCreationError {
 
 impl std::fmt::Display for BufferCreationError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use::std::error::Error;
+
         write!(fmt, "{}", self.description())
     }
 }
@@ -100,15 +103,12 @@ impl Mesh {
 }
 
 
-use std::path::Path;
-use graphics::glium::program::Program;
-use std::fs::File;
-use std::io::BufReader;
+
 
 #[derive(Debug)]
 pub enum ProgramCreationError {
     IOError(std::io::Error),
-    ShaderError(graphics::glium::program::ProgramCreationError)
+    ShaderError(glium::ProgramCreationError)
 }
 
 impl std::error::Error for ProgramCreationError {
@@ -122,7 +122,7 @@ impl std::error::Error for ProgramCreationError {
 
 impl std::fmt::Display for ProgramCreationError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        use::std::error::Error;
+
         write!(fmt, "{}", self.description())
     }
 }
@@ -151,6 +151,6 @@ where P: AsRef<Path>, F: Facade {
         vertex_file_buffer.read_to_string(&mut fragment_src)
             .map_err(ProgramCreationError::IOError)?;
     };
-    use std::error::Error;
+
     glium::Program::from_source(facade, vertex_src.as_str(), fragment_src.as_str(), None).map_err(ProgramCreationError::ShaderError)
 }
