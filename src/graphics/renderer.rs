@@ -1,0 +1,286 @@
+use graphics;
+use graphics::nalgebra::{Vector4, Vector3, Matrix4};
+use graphics::glium::backend::{Facade};
+use graphics::core::*;
+use std::path::Path;
+use graphics::glium::Surface;
+
+#[macro_use]
+use graphics::glium::uniform;
+
+pub struct ModelTrans {
+    uniform_matrix: Matrix4<f32>,
+    changed: bool,
+    position: Vector3<f32>,
+    dimensions: Vector3<f32>,
+    at: Vector3<f32>,
+    up: Vector3<f32>
+}
+
+impl Default for ModelTrans {
+    fn default() -> ModelTrans {
+        ModelTrans  {
+            uniform_matrix: Matrix4::identity(),
+            changed: true,
+            position: Vector3::new(0.,0.,0.),
+            dimensions: Vector3::new(1.,1.,1.),
+            at: Vector3::new(0.,0.,1.),
+            up: Vector3::new(0.,1.,0.),
+        }
+    }
+}
+
+impl ModelTrans {
+
+    pub fn as_ref(&mut self) -> &[[f32; 4]; 4] {
+        if self.changed {
+            self.update_matrix();
+        };
+        self.uniform_matrix.as_ref()
+    }
+
+
+    fn update_matrix(&mut self) {
+        let trans = nalgebra::geometry::Translation::from(self.position)
+            .to_homogeneous();
+        let look_at = nalgebra::Rotation3::look_at_rh(&self.at, &self.up)
+            .to_homogeneous();
+        self.uniform_matrix = trans * look_at
+    }
+
+
+    pub fn move_to(&mut self, x: f32, y: f32, z: f32) {
+        self.position = nalgebra::Vector3::new(x,y,z);
+        self.changed = true;
+    }
+
+    pub fn add_position(&mut self, dir: &Vector3<f32>) {
+        self.position += dir;
+        self.changed = true;
+    }
+
+    pub fn set_up(&mut self, up: nalgebra::Vector3<f32>) {
+        self.up = up;
+        self.changed = true
+    }
+
+    pub fn set_look_at(&mut self, at: nalgebra::Vector3<f32>) {
+        self.at = at;
+        self.changed = true
+    }
+
+    pub fn horizontal_rotate(&mut self, angle: f32) {
+        let rot_vec = self.at.cross(&self.up);
+        self.at = nalgebra::Rotation3::from_axis_angle(
+            &nalgebra::Unit::new_normalize(rot_vec),
+            angle) * self.at;
+        self.changed = true;
+    }
+
+    pub fn vertical_rotate(&mut self, angle: f32) {
+        let rot_vec = nalgebra::Vector3::new(0., 1., 0.);
+        self.at = nalgebra::Rotation3::from_axis_angle(
+            &nalgebra::Unit::new_normalize(rot_vec),
+            angle) * self.at;
+        self.changed = true;
+    }
+
+}
+
+
+pub struct RenderObject {
+    base_rgba:  Vector4<f32>,
+    model_trans: ModelTrans,
+    mesh_ref:    MeshRef,
+}
+
+impl RenderObject {
+    pub fn new(mesh_ref: MeshRef) -> RenderObject {
+        RenderObject {
+            base_rgba: Vector4::new(1.,0.,0.,1.),
+            model_trans: Default::default(),
+            mesh_ref: mesh_ref
+        }
+    }
+    pub fn rgb(&mut self, r: f32, g: f32, b: f32) {
+        self.base_rgba = Vector4::new(r,g,b,self.base_rgba[3])
+    }
+
+    pub fn opacity(&mut self, v: f32) {
+       self.base_rgba[3] = v
+    }
+
+    pub fn trans(&mut self) -> &ModelTrans {
+        &self.model_trans
+    }
+}
+
+
+// Dummy reference wrapper for mesh ids, wrapped so that we do not mistake it
+// for normal integers.
+#[derive(Hash, Debug, PartialEq, Eq, Copy)]
+pub struct MeshRef {
+    id : u64
+}
+
+impl Clone for MeshRef {
+    fn clone(&self) -> MeshRef {
+        *self
+    }
+}
+
+struct MeshStore {
+    mesh_ref: MeshRef,
+    map: std::collections::HashMap<MeshRef, Mesh>,
+    name_map: std::collections::HashMap<String, MeshRef>
+}
+
+impl MeshStore {
+    pub fn new() -> MeshStore {
+        MeshStore{
+            mesh_ref: MeshRef{id:0},
+            map: Default::default(),
+            name_map: Default::default()
+        }
+    }
+    // Hiding insert becaue it probaby should not be done outside the context of
+    // the renderer
+    fn insert(
+        &mut self,
+        name: &String,
+        make: &Fn() -> Result<Mesh, graphics::core::BufferCreationError>,
+    ) -> Result<MeshRef, graphics::core::BufferCreationError>
+    {
+        let content = self.name_map.get(name).map(|e| e.clone());
+        match content {
+            Option::Some(reference) => {
+                return Result::Ok(reference);
+            },
+            Option::None => {
+                let id = self.gen_id();
+                let mesh = make()?;
+                self.map.entry(id).or_insert(mesh);
+                return Result::Ok(id)
+            }
+        }
+    }
+
+    pub fn get_mesh(&self, reference: &MeshRef) -> Option<&Mesh> {
+        self.map.get(reference)
+    }
+
+    pub fn get_ref(&self, name: &String) -> Option<MeshRef> {
+        self.name_map.get(name).map(|e|{*e})
+    }
+
+    fn gen_id(&mut self) -> MeshRef {
+        let result = self.mesh_ref;
+        self.mesh_ref.id += 1;
+        return result
+    }
+}
+
+
+pub struct Renderer<'a> {
+    display: &'a glium::Display,
+    program: Option<glium::Program>,
+    mesh_store: MeshStore,
+}
+
+
+impl<'a> Renderer<'a> {
+
+    pub fn new(
+        display: &'a glium::Display
+    ) -> Renderer<'a> {
+        Renderer{
+            display: display,
+            program: Option::None,
+            mesh_store: MeshStore::new(),
+        }
+    }
+
+    pub fn mesh_store(&self) -> &MeshStore {
+        &self.mesh_store
+    }
+
+    pub fn render<I>(
+        &mut self,
+        objects : I,
+        camera: &mut graphics::camera::Camera
+    ) where I: Iterator<Item = &'a mut RenderObject> {
+
+        let mut target = self.display.draw();
+
+        target.clear_color(1.,1.,1.,0.);
+        let cam_mat = camera.as_primitive();
+
+        let program = self.program.as_mut().unwrap();
+
+        for mut obj in objects {
+            let mut mesh_ref = obj.mesh_ref.clone();
+            let mut model_mat = *obj.trans().as_ref();
+
+            let uniforms = uniform! {
+                camera_mat: cam_mat,
+                model_mat: model_mat,
+            };
+
+            let mesh = self.mesh_store.get_mesh(&mesh_ref)
+                .unwrap();
+
+            mesh.draw(
+                &mut target,
+                &program,
+                &uniforms,
+                &Default::default()
+            ).unwrap()
+        };
+
+        target.finish();
+    }
+
+    pub fn load_mesh(
+        &mut self,
+        name: &String,
+        indices: &[u16],
+        vertices: &[Vertex]
+    ) -> Result<&Renderer, graphics::core::BufferCreationError> {
+        let mut f = self.display;
+        self.mesh_store.insert(name, &|| {
+            graphics::core::Mesh::new(f,indices, vertices)}
+        )?;
+        Result::Ok(self)
+    }
+
+    pub fn load_mesh_with(
+        &mut self,
+        name: &String,
+        init_fn: &Fn(&Facade) -> Result<Mesh, graphics::core::BufferCreationError>
+    ) -> Result<MeshRef, graphics::core::BufferCreationError>
+     {
+        let f = self.display;
+        self.mesh_store.insert(name, &|| {
+            init_fn(f)
+        })
+    }
+
+
+    pub fn get_mesh(&self, name: &String) -> Option<MeshRef> {
+        self.mesh_store.get_ref(name)
+    }
+
+    pub fn use_program<P>(
+        &mut self,
+        vertex_fp: P,
+        fragment_fp: P
+    ) -> Result<&Renderer, graphics::core::ProgramCreationError>
+    where P: AsRef<Path> {
+        self.program = graphics::core::simple_program(
+            self.display,
+            vertex_fp,
+            fragment_fp
+        ).map(Option::Some)?;
+        Result::Ok(self)
+    }
+}

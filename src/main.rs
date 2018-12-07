@@ -11,21 +11,27 @@ fn main() {
     let window = glutin::WindowBuilder::new();
     let context = glutin::ContextBuilder::new();
     let display = glium::Display::new(window, context, &events_loop).unwrap();
-    let vertex_shader_src = String::new();
-    let fragment_shader_src = String::new();
 
-    let program = graphics::core::simple_program(
-        &display,
-        "shaders/vertex.vert",
-        "shaders/fragment.frag"
+    let mut renderer = graphics::renderer::Renderer::new(&display);
+    renderer.use_program("shaders/vertex.vert", "shaders/fragment.frag")
+        .unwrap();
+
+    let cube_mesh = renderer.load_mesh_with(
+        &String::from("unit_cube"),
+        &graphics::shapes::make_unit_cube
+    ).unwrap();
+
+    let triangle_mesh =renderer.load_mesh_with(
+        &String::from("unit_triangle"),
+        &graphics::shapes::make_unit_cube
     ).unwrap();
 
 
+    let mut cube = graphics::renderer::RenderObject::new(cube_mesh);
 
-    let triangle_mesh = graphics::shapes::make_unit_cube(&display).unwrap();
-    let mut camera = graphics::camera::Camera::default();
-    camera.set_aspect(0.5);
-    camera.move_to_dims(0.,0.,-10.);
+    let mut camera = graphics::camera::Camera::default()
+        .aspect(0.5)
+        .position(0.,0.,-10.);
 
     let mut do_loop = true;
     while do_loop {
@@ -33,11 +39,10 @@ fn main() {
 
             match event {
                 glutin::Event::WindowEvent {event, ..} => {
-
                     use glutin::WindowEvent::*;
                     match event {
                         Resized(size) => {
-                            camera.use_aspect_of(size.into())
+                            camera.aspect_of(size.into());
                         },
                         KeyboardInput{input, ..} => {
                             match input.scancode {
@@ -67,9 +72,7 @@ fn main() {
         let mut target = display.draw();
         target.clear_color(1.,1.,1.,0.);
 
-        let uniforms = uniform! {
-            camera_projection : *camera.as_primitive(),
-        };
+        renderer.draw([cube].into(), &camera);
 
         triangle_mesh.draw(&mut target, &program,
                            &uniforms,

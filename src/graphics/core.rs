@@ -50,8 +50,6 @@ pub struct Mesh {
 }
 
 
-
-
 impl Mesh {
 
     pub fn draw<S, U>(
