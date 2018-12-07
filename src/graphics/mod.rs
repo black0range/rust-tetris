@@ -1,4 +1,3 @@
-extern crate glium;
 extern crate nalgebra;
 
 pub mod core;

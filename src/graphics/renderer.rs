@@ -217,25 +217,25 @@ impl<'a> Renderer<'a> {
 
         let program = self.program.as_mut().unwrap();
 
-        for mut obj in objects {
-            let mut mesh_ref = obj.mesh_ref.clone();
-            let mut model_mat = *obj.trans().as_ref();
+        // for mut obj in objects {
+        //     let mut mesh_ref = obj.mesh_ref.clone();
+        //     let mut model_mat = *obj.trans().as_ref();
 
-            let uniforms = uniform! {
-                camera_mat: cam_mat,
-                model_mat: model_mat,
-            };
+        //     let uniforms = uniform! {
+        //         camera_mat: cam_mat,
+        //         model_mat: model_mat,
+        //     };
 
-            let mesh = self.mesh_store.get_mesh(&mesh_ref)
-                .unwrap();
+        //     let mesh = self.mesh_store.get_mesh(&mesh_ref)
+        //         .unwrap();
 
-            mesh.draw(
-                &mut target,
-                &program,
-                &uniforms,
-                &Default::default()
-            ).unwrap()
-        };
+        //     mesh.draw(
+        //         &mut target,
+        //         &program,
+        //         &uniforms,
+        //         &Default::default()
+        //     ).unwrap()
+        // };
 
         target.finish();
     }
