@@ -1,8 +1,6 @@
 pub struct Camera {
     uniform_matrix: nalgebra::Matrix4<f32>,
 
-
-
     proj_cached: nalgebra::Matrix4<f32>,
     trans_cached: nalgebra::Matrix4<f32>,
     look_at_cached: nalgebra::Matrix4<f32>,
@@ -42,13 +40,21 @@ impl Default for Camera {
 
             position: nalgebra::Vector3::new(0.,0.,0.),
             up: nalgebra::Vector3::new(0.,1.,0.),
-            at: nalgebra::Vector3::new(0.,0.,-1.),
+            at: nalgebra::Vector3::new(0.,0.,1.),
         }
     }
 }
 
 
 impl Camera {
+
+    pub fn as_primitive(&mut self) -> &[[f32; 4]; 4] {
+        if self.anything_changed() {
+            self.update_matrix();
+        };
+        self.uniform_matrix.as_ref()
+    }
+
     fn  anything_changed(&self) -> bool {
         self.changed_proj || self.changed_trans || self.changed_look_at
     }
@@ -84,16 +90,15 @@ impl Camera {
         self.uniform_matrix = self.proj_cached * self.trans_cached * self.look_at_cached;
     }
 
-    pub fn as_array(&mut self) -> &[[f32; 4]; 4] {
-        if self.anything_changed() {
-            self.update_matrix();
-        };
-        self.uniform_matrix.as_ref()
-    }
     pub fn set_aspect(&mut self, aspect: f32) {
         self.aspect = aspect;
         self.set_changed_proj();
     }
+
+    pub fn use_aspect_of(&mut self, (x,y): (f64,f64)) {
+        self.set_aspect((y/x) as f32)
+    }
+
     pub fn set_fovy(&mut self, fovy: f32) {
         self.fovy = fovy;
         self.set_changed_proj();
@@ -123,8 +128,6 @@ impl Camera {
         self.set_changed_look_at();
     }
 
-
-
     pub fn move_to_dims(&mut self, x: f32, y: f32, z: f32) {
         self.position = nalgebra::Vector3::new(x,y,z);
         self.set_changed_trans();
@@ -140,9 +143,13 @@ impl Camera {
         self.set_changed_trans();
     }
 
-    pub fn move_forward(&mut self, d: f32) {
+    pub fn move_forwards(&mut self, d: f32) {
         let a = d * self.at;
         self.add_position(&a);
+    }
+
+    pub fn move_backwards(&mut self, d: f32) {
+        self.move_forwards(-d);
     }
 
     pub fn move_sideways(&mut self, d: f32) {
@@ -154,7 +161,6 @@ impl Camera {
         let a = self.at.cross(&self.up);
         self.add_position(&a);
     }
-
 
     pub fn set_up(&mut self, up: nalgebra::Vector3<f32>) {
         self.up = up;

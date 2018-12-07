@@ -20,39 +20,60 @@ fn main() {
         "shaders/fragment.frag"
     ).unwrap();
 
+
+
     let triangle_mesh = graphics::shapes::make_unit_cube(&display).unwrap();
+    let mut camera = graphics::camera::Camera::default();
+    camera.set_aspect(0.5);
+    camera.move_to_dims(0.,0.,-10.);
 
-    let proj_slice = nalgebra::Perspective3::new(16./10., 0.5, -1., 10.).to_homogeneous();
-    let proj : &[[f32; 4] ;4] = proj_slice.as_ref();
+    let mut do_loop = true;
+    while do_loop {
+        events_loop.poll_events(|event|{
 
-    let uniforms = uniform! {
-        camera_projection : *proj
-    };
+            match event {
+                glutin::Event::WindowEvent {event, ..} => {
 
-    let mut n : u32 = 0;
-    events_loop.run_forever(|event|{
+                    use glutin::WindowEvent::*;
+                    match event {
+                        Resized(size) => {
+                            camera.use_aspect_of(size.into())
+                        },
+                        KeyboardInput{input, ..} => {
+                            match input.scancode {
+                                17 => {
+                                    // Wordward
+                                    camera.move_forwards(0.5);
+                                },
+                                31 => {
+                                    //Backwards
+                                    camera.move_backwards(0.5);
+                                },
+                                _ => ()
+                            }
+                            //                        println!("Scancode: {}", input.scancode)
+                        },
+                        CloseRequested => {
+                            println!("Got break request!");
+                            do_loop = false;
+                        },
+                        _ => ()
+                    }
+                },
+                _ => ()
+            }
+        });
 
-        match event {
-            glutin::Event::WindowEvent {event, ..} => {
-                match event {
-                    glutin::WindowEvent::CloseRequested => {
-                        println!("Got break request!");
-                        return glium::glutin::ControlFlow::Break;
-                    },
-                    _ => ()
-                }
-                let mut target = display.draw();
-                target.clear_color(1.,1.,1.,0.);
-                triangle_mesh.draw(&mut target, &program,
-                                   &uniforms,
-                                   &Default::default()).unwrap();
-                target.finish().unwrap();
-                n += 1;
-                println!("Hello world {}", n);
-            },
-            _ => ()
-        }
+        let mut target = display.draw();
+        target.clear_color(1.,1.,1.,0.);
 
-        glium::glutin::ControlFlow::Continue
-    })
+        let uniforms = uniform! {
+            camera_projection : *camera.as_primitive(),
+        };
+
+        triangle_mesh.draw(&mut target, &program,
+                           &uniforms,
+                           &Default::default()).unwrap();
+        target.finish().unwrap();
+    }
 }
