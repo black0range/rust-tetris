@@ -43,13 +43,13 @@ const UNIT_CUBE_INDICES : [u16;36] =  [
 
 
 
-pub fn make_unit_cube<F>(facade: &F) -> Result<Mesh, BufferCreationError>
+pub fn make_unit_cube<'a, F>(facade: &'a F) -> Result<Mesh, BufferCreationError>
 where F: Facade {
     Mesh::new(facade, &UNIT_CUBE_INDICES, &UNIT_CUBE_VERTICES)
 }
 
 
-pub fn make_unit_triangle<F>(facade: &F) -> Result<Mesh, BufferCreationError>
+pub fn make_unit_triangle<'a, F>(facade: &'a F) -> Result<Mesh, BufferCreationError>
 where F: Facade {
     Mesh::new(facade, &UNIT_TRIANGLE_INDICES, &UNIT_TRIANGLE_VERTICES)
 }

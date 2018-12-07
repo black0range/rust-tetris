@@ -1,4 +1,3 @@
-#[macro_use]
 use glium::backend::{Facade};
 use std::path::Path;
 use glium::program::Program;

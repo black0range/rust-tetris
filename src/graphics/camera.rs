@@ -97,6 +97,7 @@ impl Camera {
         self
     }
 
+
     pub fn aspect_of(&mut self, (x,y): (f64,f64)) -> &Camera {
         self.aspect((y/x) as f32)
     }

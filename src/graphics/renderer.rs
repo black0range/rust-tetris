@@ -4,7 +4,7 @@ use crate::graphics::core::*;
 use crate::graphics::camera::Camera;
 use std::path::Path;
 use glium::Surface;
-
+use glium::uniform;
 #[macro_use]
 
 pub struct ModelTrans {
@@ -31,13 +31,19 @@ impl Default for ModelTrans {
 
 impl ModelTrans {
 
+    pub fn as_array(&mut self) -> [[f32; 4]; 4] {
+        if self.changed {
+            self.update_matrix();
+        };
+        *self.uniform_matrix.as_ref()
+    }
+
     pub fn as_ref(&mut self) -> &[[f32; 4]; 4] {
         if self.changed {
             self.update_matrix();
         };
         self.uniform_matrix.as_ref()
     }
-
 
     fn update_matrix(&mut self) {
         let trans = nalgebra::geometry::Translation::from(self.position)
@@ -203,38 +209,36 @@ impl<'a> Renderer<'a> {
         &self.mesh_store
     }
 
-    pub fn render<I>(
+    pub fn render(
         &mut self,
-        _objects : I,
+        objects :&mut Vec<RenderObject>,
         camera: &mut Camera
-    ) where I: Iterator<Item = &'a mut RenderObject> {
-
+    ) {
         let mut target = self.display.draw();
-
         target.clear_color(1.,1.,1.,0.);
-        let _cam_mat = camera.as_primitive();
+        let cam_mat = camera.as_primitive();
+        let program = self.program.as_mut().unwrap();
 
-        let _program = self.program.as_mut().unwrap();
 
-        // for mut obj in objects {
-        //     let mut mesh_ref = obj.mesh_ref.clone();
-        //     let mut model_mat = *obj.trans().as_ref();
+        for obj in objects.into_iter() {
+            let mesh_ref = obj.mesh_ref.clone();
+            let model_mat = obj.model_trans.as_array();
+            println!("Redering object! {:?}", model_mat);
+            let uniforms = uniform! {
+                camera_mat: cam_mat,
+                model_mat: model_mat,
+            };
 
-        //     let uniforms = uniform! {
-        //         camera_mat: cam_mat,
-        //         model_mat: model_mat,
-        //     };
+            let mesh = self.mesh_store.get_mesh(&mesh_ref)
+                .unwrap();
 
-        //     let mesh = self.mesh_store.get_mesh(&mesh_ref)
-        //         .unwrap();
-
-        //     mesh.draw(
-        //         &mut target,
-        //         &program,
-        //         &uniforms,
-        //         &Default::default()
-        //     ).unwrap()
-        // };
+            mesh.draw(
+                &mut target,
+                &program,
+                &uniforms,
+                &Default::default()
+            ).unwrap()
+        };
 
         target.finish();
     }
@@ -255,13 +259,14 @@ impl<'a> Renderer<'a> {
     pub fn load_mesh_with(
         &mut self,
         name: &String,
-        init_fn: &Fn(&Facade) -> Result<Mesh, BufferCreationError>
+        init_fn: &Fn(&glium::Display) -> Result<Mesh, BufferCreationError>
     ) -> Result<MeshRef, BufferCreationError>
-     {
+    {
         let f = self.display;
         self.mesh_store.insert(name, &|| {
             init_fn(f)
         })
+
     }
 
 

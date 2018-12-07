@@ -21,23 +21,26 @@ fn main() {
 
     let triangle_mesh =renderer.load_mesh_with(
         &String::from("unit_triangle"),
-        &shapes::make_unit_cube
+        &|f| { shapes::make_unit_triangle(f) }
     ).unwrap();
 
 
     let mut cube = graphics::renderer::RenderObject::new(cube_mesh);
 
-    let mut camera = graphics::camera::Camera::default()
-        .aspect(0.5)
-        .position(0.,0.,-10.);
+    let mut camera = graphics::camera::Camera::default();
+    camera.aspect(0.5);
+    camera.position(0.,0.,-10.);
 
     let mut do_loop = true;
+    let mut elems = Vec::<graphics::renderer::RenderObject>::new();
+    elems.push(cube);
+
     while do_loop {
         events_loop.poll_events(|event|{
 
             match event {
-                glutin::Event::WindowEvent {event, ..} => {
-                    use glutin::WindowEvent::*;
+                glium::glutin::Event::WindowEvent {event, ..} => {
+                    use glium::glutin::WindowEvent::*;
                     match event {
                         Resized(size) => {
                             camera.aspect_of(size.into());
@@ -45,7 +48,7 @@ fn main() {
                         KeyboardInput{input, ..} => {
                             match input.scancode {
                                 17 => {
-                                    // Wordward
+                                    // Fordward
                                     camera.move_forwards(0.5);
                                 },
                                 31 => {
@@ -67,14 +70,10 @@ fn main() {
             }
         });
 
-        let mut target = display.draw();
-        target.clear_color(1.,1.,1.,0.);
-
-        renderer.render([cube].into(), &mut camera);
+        renderer.render(&mut elems, &mut camera);
 
         // triangle_mesh.draw(&mut target, &program,
         //                    &uniforms,
         //                    &Default::default()).unwrap();
-        target.finish().unwrap();
     }
 }
