@@ -7,5 +7,5 @@ uniform mat4 model_mat;
 
 
 void main() {
-  gl_Position = camera_mat * model_mat * vec4(position.xy, 0.0, 1.0);
+  gl_Position = camera_mat * model_mat * vec4(position.xyz, 1.0);
 }

@@ -28,15 +28,15 @@ fn main() {
     // ).unwrap();
 
     let mut camera = graphics::camera::Camera::default();
-    camera.aspect(3.1415);
-    camera.set_far(10.);
+    camera.aspect(0.5);
+    camera.set_far(8.);
     camera.set_near(1.);
-    camera.position(0.,0.,-3.);
+    camera.position(0.,0.,-2.);
 
     let mut do_loop = true;
 
 
-    let mut manager = TetrisManager::new(20, 20);
+    let mut manager = TetrisManager::new(20, 30);
     let mut i = 0;
     let mut last_tick = std::time::Instant::now();
     while do_loop {
@@ -64,7 +64,7 @@ fn main() {
                                             VirtualKeyCode::D => {
                                                 manager.move_right();
                                             },
-                                            VirtualKeyCode::Space => {
+                                            VirtualKeyCode::S => {
                                                 manager.tick();
                                             },
                                             _ => ()
@@ -91,7 +91,7 @@ fn main() {
             last_tick = std::time::Instant::now()
         }
 
-        let scale = 0.5 / manager.num_columns() as f32;
+        let scale = 0.5 / manager.num_columns() as f32  - 0.0001;
         let nodes = manager.elems();
         let mut elems = nodes.iter().map(|((x,y), color)| {
             let mut obj = graphics::renderer::RenderObject::new(cube_mesh);
