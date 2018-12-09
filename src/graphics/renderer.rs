@@ -11,18 +11,18 @@ pub struct ModelTrans {
     uniform_matrix: Matrix4<f32>,
     changed: bool,
     position: Vector3<f32>,
-    dimensions: Vector3<f32>,
+    scale: Vector3<f32>,
     at: Vector3<f32>,
     up: Vector3<f32>
 }
 
 impl Default for ModelTrans {
     fn default() -> ModelTrans {
-        ModelTrans  {
+        ModelTrans {
             uniform_matrix: Matrix4::identity(),
             changed: true,
             position: Vector3::new(0.,0.,0.),
-            dimensions: Vector3::new(1.,1.,1.),
+            scale: Vector3::new(1.,1.,1.),
             at: Vector3::new(0.,0.,1.),
             up: Vector3::new(0.,1.,0.),
         }
@@ -48,9 +48,18 @@ impl ModelTrans {
     fn update_matrix(&mut self) {
         let trans = nalgebra::geometry::Translation::from(self.position)
             .to_homogeneous();
+        let mut scale = nalgebra::Matrix4::from_diagonal(
+            &nalgebra::Vector4::new(
+                self.scale[0],
+                self.scale[1],
+                self.scale[2],
+                1.0
+            )
+        );
+
         let look_at = nalgebra::Rotation3::look_at_rh(&self.at, &self.up)
             .to_homogeneous();
-        self.uniform_matrix = trans * look_at
+        self.uniform_matrix = trans * scale
     }
 
 
@@ -59,7 +68,12 @@ impl ModelTrans {
         self.changed = true;
     }
 
-    pub fn add_position(&mut self, dir: &Vector3<f32>) {
+    pub fn add_position(&mut self, x: f32, y: f32, z: f32) {
+        self.position += Vector3::new(x,y,z);
+        self.changed = true;
+    }
+
+    pub fn add_position_vec(&mut self, dir: &Vector3<f32>) {
         self.position += dir;
         self.changed = true;
     }
@@ -71,6 +85,31 @@ impl ModelTrans {
 
     pub fn set_look_at(&mut self, at: nalgebra::Vector3<f32>) {
         self.at = at;
+        self.changed = true
+    }
+
+    pub fn set_uniform_scale(&mut self, v: f32) {
+        self.scale = Vector3::new(v,v,v);
+        self.changed = true
+    }
+
+    pub fn set_scale(&mut self, x: f32, y:f32, z:f32) {
+        self.scale = Vector3::new(x,y,z);
+        self.changed = true
+    }
+
+    pub fn set_scale_vec(&mut self, vec: Vector3<f32>) {
+        self.scale = vec;
+        self.changed = true
+    }
+
+    pub fn scale_by(&mut self, x: f32, y:f32, z:f32) {
+        self.scale.component_mul(&Vector3::new(x,y,z));
+        self.changed = true
+    }
+
+    pub fn scale_by_vec(&mut self, vec: Vector3<f32>) {
+        self.scale.component_mul(&vec);
         self.changed = true
     }
 
@@ -111,12 +150,17 @@ impl RenderObject {
         self.base_rgba = Vector4::new(r,g,b,self.base_rgba[3])
     }
 
+    pub fn rgb_vec(&mut self, vec: Vector3<f32>) {
+        self.base_rgba = Vector4::new(vec[0],vec[1],vec[2],self.base_rgba[3])
+    }
+
+
     pub fn opacity(&mut self, v: f32) {
        self.base_rgba[3] = v
     }
 
-    pub fn trans(&mut self) -> &ModelTrans {
-        &self.model_trans
+    pub fn trans(&mut self) -> &mut ModelTrans {
+        &mut self.model_trans
     }
 }
 
@@ -215,18 +259,17 @@ impl<'a> Renderer<'a> {
         camera: &mut Camera
     ) {
         let mut target = self.display.draw();
-        target.clear_color(1.,1.,1.,0.);
+        target.clear_color(0.,0.,0.,0.);
         let cam_mat = camera.as_primitive();
         let program = self.program.as_mut().unwrap();
-
 
         for obj in objects.into_iter() {
             let mesh_ref = obj.mesh_ref.clone();
             let model_mat = obj.model_trans.as_array();
-            println!("Redering object! {:?}", model_mat);
             let uniforms = uniform! {
                 camera_mat: cam_mat,
                 model_mat: model_mat,
+                rgba_color: *obj.base_rgba.as_ref()
             };
 
             let mesh = self.mesh_store.get_mesh(&mesh_ref)

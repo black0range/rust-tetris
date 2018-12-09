@@ -106,12 +106,12 @@ impl Camera {
         self.fovy = fovy;
         self.set_changed_proj();
     }
-    pub fn near(&mut self, near: f32)  -> &Camera {
+    pub fn set_near(&mut self, near: f32)  -> &Camera {
         self.near = near;
         self.set_changed_proj();
         self
     }
-    pub fn far(&mut self, far: f32) -> &Camera {
+    pub fn set_far(&mut self, far: f32) -> &Camera {
         self.far = far;
         self.set_changed_proj();
         self

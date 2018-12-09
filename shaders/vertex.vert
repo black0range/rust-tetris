@@ -5,6 +5,7 @@ in vec3 position;
 uniform mat4 camera_mat;
 uniform mat4 model_mat;
 
+
 void main() {
   gl_Position = camera_mat * model_mat * vec4(position.xy, 0.0, 1.0);
 }
